@@ -27,15 +27,18 @@ type window struct {
 	refresh    *walk.PushButton
 	results    *walk.TextEdit
 	busy       bool
+	links      *walk.TableView
+	selected   *walk.TextEdit
+	model      *referenceModel
 }
 
 func Run() error {
-	w := &window{}
+	w := &window{model: &referenceModel{}}
 	err := (d.MainWindow{
 		AssignTo: &w.main,
-		Title:    "KompasLink — диагностика КОМПАС-3D",
-		MinSize:  d.Size{Width: 700, Height: 570},
-		Size:     d.Size{Width: 820, Height: 650},
+		Title:    "KompasLink — внешние ссылки КОМПАС-3D",
+		MinSize:  d.Size{Width: 820, Height: 740},
+		Size:     d.Size{Width: 1080, Height: 900},
 		Layout:   d.VBox{Margins: d.Margins{Left: 18, Top: 18, Right: 18, Bottom: 18}, Spacing: 12},
 		Children: []d.Widget{
 			d.Label{Text: "KompasLink", Font: d.Font{PointSize: 18, Bold: true}},
@@ -65,15 +68,30 @@ func Run() error {
 			d.Composite{
 				Layout: d.HBox{},
 				Children: []d.Widget{
-					d.PushButton{AssignTo: &w.refresh, Text: "Обновить диагностику", OnClicked: w.start},
+					d.PushButton{AssignTo: &w.refresh, Text: "Обновить ссылки", OnClicked: w.start},
 					d.HSpacer{},
 				},
 			},
+			d.Label{Text: "Внешние ссылки. Тип связи API не сообщает; относительные пути не разрешаются автоматически."},
+			d.TableView{
+				AssignTo: &w.links, Model: w.model, AlternatingRowBG: true,
+				ColumnsSizable: true, LastColumnStretched: true, NotSortableByHeaderClick: true,
+				MinSize: d.Size{Height: 160}, StretchFactor: 2,
+				Columns: []d.TableViewColumn{
+					{Title: "Исходный путь", Width: 400},
+					{Title: "Состояние файла", Width: 155},
+					{Title: "Тип связи", Width: 150},
+					{Title: "Пояснение", Width: 300},
+				},
+				OnCurrentIndexChanged: w.selectReference,
+			},
+			d.TextEdit{AssignTo: &w.selected, ReadOnly: true, MinSize: d.Size{Height: 50}},
+			d.Label{Text: "Замена отключена: для КОМПАС-18 не подтверждены метод замены и набор изменяемых файлов."},
 			d.Label{Text: "Результаты текущего запуска:"},
 			d.TextEdit{
 				AssignTo: &w.results, ReadOnly: true, VScroll: true,
 				MinSize: d.Size{Height: 130}, StretchFactor: 1,
-				Text: "Откройте тестовую копию .a3d или .m3d в КОМПАС и нажмите «Обновить диагностику».\r\nСовместимость с КОМПАС-18 на реальной установке ещё не подтверждена. Внешние ссылки пока не читаются.",
+				Text: "Откройте сохранённую тестовую копию .a3d или .m3d в КОМПАС и нажмите «Обновить ссылки».\r\nСовместимость с КОМПАС-18 на реальной установке ещё не подтверждена. Документы не изменяются и не сохраняются.",
 			},
 		},
 	}).Create()
@@ -103,6 +121,8 @@ func (w *window) start() {
 	w.path.SetText("—")
 	w.state.SetText("—")
 	w.properties.SetText("—")
+	w.model.set(nil)
+	w.selected.SetText("")
 	w.append("Подключение к запущенному КОМПАС…")
 	go func() {
 		report, err := kompas.Probe()
@@ -158,7 +178,26 @@ func (w *window) show(value result) {
 		mode = "Только для чтения"
 	}
 	w.properties.SetText(fmt.Sprintf("%s; тип API: %d", mode, doc.TypeID))
+	if r.ReferencesRead {
+		w.model.set(r.References)
+		w.append(fmt.Sprintf("Ссылки прочитаны: %d. Типы связей и полнота списка не подтверждены.", len(r.References)))
+	} else {
+		w.append("Ссылки не прочитаны: " + r.ReferencesError)
+	}
 	w.append("Диагностика завершена: " + doc.Name + ". Файл не изменялся.")
+}
+
+func (w *window) selectReference() {
+	if w.links == nil || w.selected == nil {
+		return
+	}
+	index := w.links.CurrentIndex()
+	if index < 0 || index >= len(w.model.rows) {
+		w.selected.SetText("")
+		return
+	}
+	r := w.model.rows[index]
+	w.selected.SetText(r.Path + "\r\n" + r.Status + ". " + r.Detail)
 }
 
 func (w *window) append(message string) {

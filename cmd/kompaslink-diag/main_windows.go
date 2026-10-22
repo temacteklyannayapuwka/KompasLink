@@ -21,6 +21,8 @@ func run() int {
 	}{Report: report}
 	if probeErr != nil {
 		output.Error = probeErr.Error()
+	} else if report.ReferencesError != "" {
+		output.Error = report.ReferencesError
 	}
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
@@ -28,7 +30,7 @@ func run() int {
 		fmt.Fprintln(os.Stderr, "Не удалось вывести диагностику:", err)
 		return 1
 	}
-	if probeErr != nil {
+	if probeErr != nil || report.ReferencesError != "" {
 		return 1
 	}
 	return 0

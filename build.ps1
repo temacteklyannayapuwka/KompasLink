@@ -26,6 +26,13 @@ try {
     $actualVersion = go env GOVERSION
     if ($LASTEXITCODE -ne 0) { throw "Cannot determine Go version" }
     if ($actualVersion -ne "go$requiredVersion") { throw "Install Go $requiredVersion; found $actualVersion" }
+    $env:GOOS = (go env GOHOSTOS).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "Cannot determine build host OS" }
+    $env:GOARCH = (go env GOHOSTARCH).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "Cannot determine build host architecture" }
+    $env:CGO_ENABLED = "0"
+    go run github.com/akavel/rsrc@v0.10.2 -manifest cmd/kompaslink/app.manifest -arch $Architecture -o "cmd/kompaslink/manifest_windows_$Architecture.syso"
+    if ($LASTEXITCODE -ne 0) { throw "Manifest resource generation failed" }
     $env:GOOS = "windows"
     $env:GOARCH = $Architecture
     $env:CGO_ENABLED = "0"
@@ -38,8 +45,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Diagnostic build failed" }
     go build -trimpath -buildvcs=false -mod=readonly -ldflags="-H windowsgui" -o bin/kompaslink.exe ./cmd/kompaslink
     if ($LASTEXITCODE -ne 0) { throw "GUI build failed" }
-    Copy-Item cmd/kompaslink/app.manifest bin/kompaslink.exe.manifest -Force
-    $files = @("kompaslink.exe", "kompaslink-diag.exe", "kompaslink.exe.manifest")
+    $files = @("kompaslink.exe", "kompaslink-diag.exe")
     $checksums = foreach ($file in $files) {
         if (-not (Test-Path "bin/$file" -PathType Leaf)) { throw "Missing build output: $file. Check endpoint protection reports; do not disable protection." }
         $hash = Get-FileHash "bin/$file" -Algorithm SHA256

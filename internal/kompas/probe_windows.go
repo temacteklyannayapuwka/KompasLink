@@ -11,6 +11,7 @@ import (
 	"github.com/go-ole/go-ole/oleutil"
 
 	"kompaslink/internal/diagnostic"
+	"kompaslink/internal/files"
 )
 
 func Probe() (report diagnostic.Report, err error) {
@@ -108,6 +109,21 @@ func Probe() (report diagnostic.Report, err error) {
 		report.State = "document_without_saved_path"
 	} else if info.Changed {
 		report.State = "document_has_unsaved_changes"
+	}
+	extension := strings.ToLower(filepath.Ext(info.Path))
+	if !info.HasSavedPath || (extension != ".a3d" && extension != ".m3d") {
+		report.ReferencesError = "Чтение ссылок разрешено только для сохранённых .a3d и .m3d"
+		return report, nil
+	}
+	paths, linksErr := readReferences(doc)
+	if linksErr != nil {
+		report.ReferencesError = linksErr.Error()
+		return report, nil
+	}
+	report.ReferencesRead = true
+	report.References = make([]diagnostic.Reference, 0, len(paths))
+	for _, path := range paths {
+		report.References = append(report.References, files.Check(path))
 	}
 	return report, nil
 }

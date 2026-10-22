@@ -33,3 +33,4 @@ go.work.sum
 # .vscode/
 
 /bin/
+/cmd/kompaslink/manifest_windows_*.syso

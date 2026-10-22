@@ -18,9 +18,19 @@ type Document struct {
 }
 
 type Report struct {
-	Connected bool      `json:"connected"`
-	ProgID    string    `json:"prog_id"`
-	Version   *Version  `json:"version"`
-	Document  *Document `json:"document"`
-	State     string    `json:"state"`
+	Connected       bool        `json:"connected"`
+	ProgID          string      `json:"prog_id"`
+	Version         *Version    `json:"version"`
+	Document        *Document   `json:"document"`
+	State           string      `json:"state"`
+	References      []Reference `json:"references"`
+	ReferencesRead  bool        `json:"references_read"`
+	ReferencesError string      `json:"references_error,omitempty"`
+}
+
+type Reference struct {
+	Path   string `json:"path"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
 }
