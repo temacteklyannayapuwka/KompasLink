@@ -1,34 +1,19 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
+	"runtime"
 
-	"kompaslink/internal/kompas"
+	"github.com/lxn/walk"
+
+	"kompaslink/internal/ui"
 )
 
 func main() {
-	os.Exit(run())
-}
-
-func run() int {
-	report, probeErr := kompas.Probe()
-	output := struct {
-		Report any    `json:"report"`
-		Error  string `json:"error,omitempty"`
-	}{Report: report}
-	if probeErr != nil {
-		output.Error = probeErr.Error()
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if err := ui.Run(); err != nil {
+		walk.MsgBox(nil, "KompasLink", "Не удалось открыть окно: "+err.Error(), walk.MsgBoxIconError)
+		os.Exit(1)
 	}
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(output); err != nil {
-		fmt.Fprintln(os.Stderr, "Не удалось вывести диагностику:", err)
-		return 1
-	}
-	if probeErr != nil {
-		return 1
-	}
-	return 0
 }
