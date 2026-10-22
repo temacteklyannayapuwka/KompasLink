@@ -149,6 +149,10 @@ func (w *window) show(value result) {
 			w.append("Подключён КОМПАС версии " + version + ". Целевая версия проекта — 18.")
 		}
 	}
+	if r.VersionError != "" {
+		w.version.SetText("Не определена")
+		w.append("Предупреждение: " + r.VersionError + ". Чтение документа продолжается.")
+	}
 	if value.err != nil {
 		w.state.SetText("Сведения не получены")
 		w.append("Ошибка: " + value.err.Error())

@@ -20,6 +20,7 @@ type Document struct {
 type Report struct {
 	Connected       bool        `json:"connected"`
 	ProgID          string      `json:"prog_id"`
+	VersionError    string      `json:"version_error,omitempty"`
 	Version         *Version    `json:"version"`
 	Document        *Document   `json:"document"`
 	State           string      `json:"state"`

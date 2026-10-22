@@ -49,9 +49,10 @@ func Probe() (report diagnostic.Report, err error) {
 
 	version, err := readVersion(base)
 	if err != nil {
-		return report, err
+		report.VersionError = err.Error()
+	} else {
+		report.Version = &version
 	}
-	report.Version = &version
 
 	appValue, err := oleutil.CallMethod(base, "ksGetApplication7")
 	if appValue != nil {
@@ -137,8 +138,11 @@ func readVersion(base *ole.IDispatch) (diagnostic.Version, error) {
 	if err != nil {
 		return version, fmt.Errorf("ksGetSystemVersion: %w", err)
 	}
-	if value == nil || value.VT != ole.VT_I4 || int32(value.Val) != 1 || version.Major <= 0 {
-		return version, errors.New("ksGetSystemVersion не подтвердил получение версии")
+	if value == nil {
+		return version, errors.New("ksGetSystemVersion не вернул VARIANT")
+	}
+	if value.VT != ole.VT_I4 || int32(value.Val) != 1 || version.Major <= 0 {
+		return version, fmt.Errorf("ksGetSystemVersion: VT=%d, результат=%d, выходная версия=%d.%d.%d.%d; получение версии не подтверждено", value.VT, value.Val, version.Major, version.Minor, version.Release, version.Build)
 	}
 	return version, nil
 }
